@@ -20,26 +20,20 @@ module FactoryGirl
     attr_reader :factories_to_lint, :invalid_factories
 
     def calculate_invalid_factories
-      factories_to_lint.inject({}) do |result, factory|
-        begin
-          FactoryGirl.create(factory.name)
-        rescue => error
-          result[factory] = error
-        end
+      factories_to_lint.select do |factory|
+          built_factory = FactoryGirl.build(factory.name)
 
-        result
+          if built_factory.respond_to?(:valid?)
+            !built_factory.valid?
+          end
       end
     end
 
     def error_message
-      lines = invalid_factories.map do |factory, exception|
-        "* #{factory.name} - #{exception.message} (#{exception.class.name})"
-      end
-
       <<-ERROR_MESSAGE.strip
 The following factories are invalid:
 
-#{lines.join("\n")}
+#{invalid_factories.map {|factory| "* #{factory.name}" }.join("\n")}
       ERROR_MESSAGE
     end
   end
